@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { createReadStream } from 'node:fs'
 import { prisma } from "../lib/prisma";
+import { openai } from "../lib/openai";
 import { z } from "zod";
 
 export async function createTranscriptionRoute(app: FastifyInstance) {
@@ -22,7 +24,7 @@ export async function createTranscriptionRoute(app: FastifyInstance) {
         prompt: z.string(),
     })
 
-    // caso estiver certo retorna o objeto com o prompt do video
+    // caso estiver certo retorna o objeto com o prompt do video    
     const { prompt } = bodySchema.parse(req.body)
 
     // buscando o arquivo de audio do video para fazer a transcrição
@@ -37,11 +39,30 @@ export async function createTranscriptionRoute(app: FastifyInstance) {
     const videoPath = video.path
 
     // proximo passo ler o arquivo e envia-lo para api que fará a transcrição desse vídeo
+    const audioReadStream = createReadStream(videoPath)
 
-    return{
-        videoId, 
+    const response = await openai.audio.transcriptions.create({
+        file: audioReadStream,
+        model: 'whisper-1',
+        language: 'pt',
+        response_format: 'json',
+        temperature: 0,
         prompt,
-        videoPath
-    }
+    })
+
+    const transcription = response.text
+
+    // salvando a transcrição no banco onde o id do video for 
+    // igual ao id do video que esta sendo transcrito
+    await prisma.video.update({
+        where: {
+            id: videoId,
+        },
+        data:{
+            transcription: response.text
+        }
+    })
+
+    return { transcription }
   })
 }
