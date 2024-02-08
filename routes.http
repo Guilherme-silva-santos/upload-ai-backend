@@ -22,3 +22,15 @@ Content-Type: application/json
 {
     "prompt": "como assim"
 }
+
+###
+# @name generate-ai-completion
+
+POST http://localhost:3333/ai/complete
+Content-Type: application/json
+
+{
+    "videoId": "d6370d5e-d865-46a9-bf5b-0bb5ab7ca194",
+    "temperature": 0.5,
+    "template": "Gere um resumo do audio: '''{transcription}'''"
+}
